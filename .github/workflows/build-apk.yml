@@ -1,0 +1,64 @@
+name: Build Web2APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      website_url:
+        description: "Website URL"
+        required: true
+        type: string
+
+      app_name:
+        description: "App Name"
+        required: true
+        type: string
+
+      package_name:
+        description: "Package Name"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Check Android project
+        run: |
+          if [ ! -d "android-template" ]; then
+            echo "Android template is not ready yet."
+            exit 1
+          fi
+
+      - name: Prepare project
+        run: |
+          cp -r android-template build-project
+
+          echo "Website URL: ${{ inputs.website_url }}"
+          echo "App Name: ${{ inputs.app_name }}"
+          echo "Package Name: ${{ inputs.package_name }}"
+
+      - name: Make Gradle executable
+        run: |
+          chmod +x build-project/gradlew
+
+      - name: Build APK
+        working-directory: build-project
+        run: |
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Web2APK-${{ inputs.app_name }}
+          path: build-project/app/build/outputs/apk/debug/*.apk
