@@ -1,0 +1,220 @@
+name: Build Web2APK
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      website_url:
+        description: "Website URL"
+        required: true
+        type: string
+
+      app_name:
+        description: "App Name"
+        required: true
+        type: string
+
+      package_name:
+        description: "Package Name"
+        required: true
+        type: string
+
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # --------------------------------
+      # 1. DOWNLOAD PROJECT
+      # --------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      # --------------------------------
+      # 2. JAVA 17
+      # --------------------------------
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+
+      # --------------------------------
+      # 3. GRADLE
+      # --------------------------------
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+
+      # --------------------------------
+      # 4. CHECK ANDROID PROJECT
+      # --------------------------------
+
+      - name: Check Android project
+        run: |
+
+          if [ ! -d "android-template" ]; then
+
+            echo "Android template not found."
+
+            exit 1
+
+          fi
+
+
+      # --------------------------------
+      # 5. PREPARE PROJECT
+      # --------------------------------
+
+      - name: Prepare Android project
+        run: |
+
+          cp -r android-template build-project
+
+
+          WEBSITE_URL="${{ inputs.website_url }}"
+
+          APP_NAME="${{ inputs.app_name }}"
+
+          PACKAGE_NAME="${{ inputs.package_name }}"
+
+
+          echo "=============================="
+
+          echo "Website URL: $WEBSITE_URL"
+
+          echo "App Name: $APP_NAME"
+
+          echo "Package Name: $PACKAGE_NAME"
+
+          echo "=============================="
+
+
+          # --------------------------------
+          # Replace Website URL
+          # --------------------------------
+
+          sed -i \
+          "s|__WEB2APK_URL__|${WEBSITE_URL}|g" \
+          build-project/app/src/main/java/com/web2apk/generated/MainActivity.java
+
+
+          # --------------------------------
+          # Replace Package Name
+          # --------------------------------
+
+          sed -i \
+          "s|com.web2apk.generated|${PACKAGE_NAME}|g" \
+          build-project/app/build.gradle
+
+
+          sed -i \
+          "s|com.web2apk.generated|${PACKAGE_NAME}|g" \
+          build-project/app/src/main/AndroidManifest.xml
+
+
+          sed -i \
+          "s|com.web2apk.generated|${PACKAGE_NAME}|g" \
+          build-project/app/src/main/java/com/web2apk/generated/MainActivity.java
+
+
+          # --------------------------------
+          # Replace App Name
+          # --------------------------------
+
+          sed -i \
+          "s|android:label=\"Web2APK\"|android:label=\"${APP_NAME}\"|g" \
+          build-project/app/src/main/AndroidManifest.xml
+
+
+      # --------------------------------
+      # 6. CREATE CORRECT JAVA PACKAGE
+      # --------------------------------
+
+      - name: Fix Java package directory
+        run: |
+
+          PACKAGE_NAME="${{ inputs.package_name }}"
+
+
+          PACKAGE_PATH=$(echo "$PACKAGE_NAME" | tr '.' '/')
+
+
+          mkdir -p \
+          "build-project/app/src/main/java/$PACKAGE_PATH"
+
+
+          mv \
+          build-project/app/src/main/java/com/web2apk/generated/MainActivity.java \
+          "build-project/app/src/main/java/$PACKAGE_PATH/MainActivity.java"
+
+
+          rmdir \
+          build-project/app/src/main/java/com/web2apk/generated \
+          2>/dev/null || true
+
+
+          rmdir \
+          build-project/app/src/main/java/com/web2apk \
+          2>/dev/null || true
+
+
+          rmdir \
+          build-project/app/src/main/java/com \
+          2>/dev/null || true
+
+
+      # --------------------------------
+      # 7. BUILD APK
+      # --------------------------------
+
+      - name: Build APK
+        working-directory: build-project
+        run: |
+
+          gradle assembleDebug \
+          --no-daemon \
+          --stacktrace
+
+
+      # --------------------------------
+      # 8. FIND APK
+      # --------------------------------
+
+      - name: Find generated APK
+        run: |
+
+          echo "Generated APK files:"
+
+          find build-project/app/build/outputs/apk \
+          -type f \
+          -name "*.apk" \
+          -print
+
+
+      # --------------------------------
+      # 9. UPLOAD APK
+      # --------------------------------
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: Web2APK-${{ inputs.app_name }}
+
+          path: |
+            build-project/app/build/outputs/apk/debug/*.apk
+
+          if-no-files-found: error
