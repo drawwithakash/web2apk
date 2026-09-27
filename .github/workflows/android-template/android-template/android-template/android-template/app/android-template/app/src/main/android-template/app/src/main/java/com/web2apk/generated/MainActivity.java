@@ -1,4 +1,4 @@
-package com.web2apk.generated;
+package __WEB2APK_PACKAGE__;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
@@ -20,13 +20,13 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private TextView errorText;
 
-    // This value will be replaced during APK generation.
     private static final String WEBSITE_URL =
             "__WEB2APK_URL__";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
@@ -70,13 +70,17 @@ public class MainActivity extends AppCompatActivity {
                     WebResourceError error) {
 
                 if (request.isForMainFrame()) {
+
                     progressBar.setVisibility(View.GONE);
+
                     errorText.setVisibility(View.VISIBLE);
                 }
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(
+                new WebChromeClient()
+        );
 
         webView.loadUrl(WEBSITE_URL);
     }
@@ -85,8 +89,11 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
 
         if (webView != null && webView.canGoBack()) {
+
             webView.goBack();
+
         } else {
+
             super.onBackPressed();
         }
     }
