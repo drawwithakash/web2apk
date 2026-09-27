@@ -1,4 +1,4 @@
-name: Build Web2APK
+ name: Build Web2APK
 
 on:
   workflow_dispatch:
